@@ -2,6 +2,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.sqlite3-journal
+*.db-journal
+*.db-wal
+*.db-shm
+Resume.csv
 .venv/
 venv/
 ENV/
