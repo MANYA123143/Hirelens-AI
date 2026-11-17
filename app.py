@@ -3,6 +3,13 @@ HireLens AI - Next-Gen Resume Intelligence & Career Ecosystem
 Main Application Entry Point (Ultra-Fast & Mobile-Responsive)
 """
 import os
+import sys
+
+# Ensure repository root is on sys.path for cloud deployment (Linux / Streamlit Cloud)
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
 import streamlit as st
 
 # Configure Streamlit page settings
