@@ -3,8 +3,12 @@ HireLens AI - AI Resume Maker (Blank Canvas for Students)
 High-speed, mobile-responsive, blank canvas builder with AI bullet & summary polishers.
 """
 import streamlit as st
-from core.resume_generator import generate_ai_summary, enhance_bullet_point, build_resume_text, build_resume_html
-from database.db import save_user_resume
+try:
+    from core.resume_generator import generate_ai_summary, enhance_bullet_point, build_resume_text, build_resume_html
+    from database.db import save_user_resume
+except ModuleNotFoundError:
+    from resume_generator import generate_ai_summary, enhance_bullet_point, build_resume_text, build_resume_html
+    from db import save_user_resume
 
 def render_resume_maker():
     st.markdown("""

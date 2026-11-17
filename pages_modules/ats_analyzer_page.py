@@ -4,9 +4,14 @@ High-speed, mobile-responsive, visual gauge & radar scoring engine.
 """
 import streamlit as st
 import plotly.graph_objects as go
-from core.ats_engine import analyze_resume_ats, extract_text_from_pdf
-from core.dataset_loader import DatasetEngine
-from database.db import save_user_resume
+try:
+    from core.ats_engine import analyze_resume_ats, extract_text_from_pdf
+    from core.dataset_loader import DatasetEngine
+    from database.db import save_user_resume
+except ModuleNotFoundError:
+    from ats_engine import analyze_resume_ats, extract_text_from_pdf
+    from dataset_loader import DatasetEngine
+    from db import save_user_resume
 from config import KAGGLE_CATEGORIES
 
 def render_ats_analyzer():

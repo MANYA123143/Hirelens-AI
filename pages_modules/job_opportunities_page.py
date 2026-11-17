@@ -5,9 +5,14 @@ Ultra-fast, mobile-responsive, 3D pydeck & plotly world mapping with 1-tap proxi
 import streamlit as st
 import pydeck as pdk
 import plotly.graph_objects as go
-from database.db import get_all_jobs, insert_job
-from database.seed_data import WORLD_CITIES
-from core.notification_engine import calculate_skill_match, broadcast_job_to_candidates
+try:
+    from database.db import get_all_jobs, insert_job
+    from database.seed_data import WORLD_CITIES
+    from core.notification_engine import calculate_skill_match, broadcast_job_to_candidates
+except ModuleNotFoundError:
+    from db import get_all_jobs, insert_job
+    from seed_data import WORLD_CITIES
+    from notification_engine import calculate_skill_match, broadcast_job_to_candidates
 from config import KAGGLE_CATEGORIES
 
 def render_job_opportunities():

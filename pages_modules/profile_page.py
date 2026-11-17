@@ -3,8 +3,12 @@ HireLens AI - Candidate Profile & Personal Details Management
 Manages user contact info, skills, location preferences, notification settings, and saved resumes.
 """
 import streamlit as st
-from database.db import update_user_profile, get_user_by_id, get_user_notifications, mark_all_notifications_read, get_user_resumes, create_notification
-from database.seed_data import WORLD_CITIES
+try:
+    from database.db import update_user_profile, get_user_by_id, get_user_notifications, mark_all_notifications_read, get_user_resumes, create_notification
+    from database.seed_data import WORLD_CITIES
+except ModuleNotFoundError:
+    from db import update_user_profile, get_user_by_id, get_user_notifications, mark_all_notifications_read, get_user_resumes, create_notification
+    from seed_data import WORLD_CITIES
 from config import KAGGLE_CATEGORIES
 
 def render_profile_page():

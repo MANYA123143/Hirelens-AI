@@ -3,8 +3,12 @@ HireLens AI - Missing Values & Skills Career Roadmap Page
 Interactive 4-phase step-by-step career and skills roadmap to bridge detected resume gaps.
 """
 import streamlit as st
-from core.roadmap_generator import generate_missing_values_roadmap
-from core.ats_engine import analyze_resume_ats
+try:
+    from core.roadmap_generator import generate_missing_values_roadmap
+    from core.ats_engine import analyze_resume_ats
+except ModuleNotFoundError:
+    from roadmap_generator import generate_missing_values_roadmap
+    from ats_engine import analyze_resume_ats
 
 def render_roadmap_page():
     st.markdown("""

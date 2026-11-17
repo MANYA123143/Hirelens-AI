@@ -1,6 +1,6 @@
 """
 HireLens AI - Next-Gen Resume Intelligence & Career Ecosystem
-Main Application Entry Point (Ultra-Fast & Mobile-Responsive)
+Main Application Entry Point (Ultra-Fast, Mobile-Responsive & Cloud-Resilient)
 """
 import os
 import sys
@@ -20,16 +20,43 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# Load custom responsive CSS
-css_path = os.path.join(os.path.dirname(__file__), "assets", "style.css")
-if os.path.exists(css_path):
-    with open(css_path, "r", encoding="utf-8") as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+# Load custom responsive CSS (supports both assets/style.css and style.css in root)
+for css_candidate in [os.path.join(ROOT_DIR, "assets", "style.css"), os.path.join(ROOT_DIR, "style.css")]:
+    if os.path.exists(css_candidate):
+        with open(css_candidate, "r", encoding="utf-8") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+        break
+
+# Hybrid imports (supports both folder package structure and flat GitHub upload structure)
+try:
+    from database.seed_data import seed_database
+    from database.db import get_user_notifications
+except ModuleNotFoundError:
+    from seed_data import seed_database
+    from db import get_user_notifications
+
+try:
+    from pages_modules.login_page import render_login_page
+    from pages_modules.dashboard_page import render_dashboard
+    from pages_modules.ats_analyzer_page import render_ats_analyzer
+    from pages_modules.roadmap_page import render_roadmap_page
+    from pages_modules.resume_maker_page import render_resume_maker
+    from pages_modules.job_opportunities_page import render_job_opportunities
+    from pages_modules.profile_page import render_profile_page
+    from pages_modules.dataset_explorer_page import render_dataset_explorer
+except ModuleNotFoundError:
+    from login_page import render_login_page
+    from dashboard_page import render_dashboard
+    from ats_analyzer_page import render_ats_analyzer
+    from roadmap_page import render_roadmap_page
+    from resume_maker_page import render_resume_maker
+    from job_opportunities_page import render_job_opportunities
+    from profile_page import render_profile_page
+    from dataset_explorer_page import render_dataset_explorer
 
 # Bootstrap database and cache on startup ONLY ONCE (avoids slow per-rerun queries!)
 @st.cache_resource(show_spinner=False)
 def bootstrap_system():
-    from database.seed_data import seed_database
     seed_database()
     return True
 
@@ -43,19 +70,7 @@ if "user" not in st.session_state:
 if "current_page" not in st.session_state:
     st.session_state["current_page"] = "dashboard"
 
-# Import Page Modules
-from pages_modules.login_page import render_login_page
-from pages_modules.dashboard_page import render_dashboard
-from pages_modules.ats_analyzer_page import render_ats_analyzer
-from pages_modules.roadmap_page import render_roadmap_page
-from pages_modules.resume_maker_page import render_resume_maker
-from pages_modules.job_opportunities_page import render_job_opportunities
-from pages_modules.profile_page import render_profile_page
-from pages_modules.dataset_explorer_page import render_dataset_explorer
-from database.db import get_user_notifications
-
 def main():
-    # If not logged in, render authentication page
     if not st.session_state["logged_in"] or not st.session_state["user"]:
         render_login_page()
         return

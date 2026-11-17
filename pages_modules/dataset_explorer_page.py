@@ -4,7 +4,10 @@ Interactive visualization, skill taxonomies, and search across 2,484 resumes fro
 """
 import streamlit as st
 import plotly.graph_objects as go
-from core.dataset_loader import DatasetEngine
+try:
+    from core.dataset_loader import DatasetEngine
+except ModuleNotFoundError:
+    from dataset_loader import DatasetEngine
 from config import KAGGLE_CATEGORIES
 
 def render_dataset_explorer():

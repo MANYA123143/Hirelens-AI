@@ -7,7 +7,10 @@ import re
 import io
 import pypdf
 from config import ATS_ACTION_VERBS, ATS_ESSENTIAL_SECTIONS
-from core.dataset_loader import DatasetEngine
+try:
+    from core.dataset_loader import DatasetEngine
+except ModuleNotFoundError:
+    from dataset_loader import DatasetEngine
 
 # Common tech & domain skills taxonomy for deep keyword extraction
 COMMON_SKILLS_TAXONOMY = [

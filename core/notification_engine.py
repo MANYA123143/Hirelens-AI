@@ -3,7 +3,10 @@ HireLens AI - Notification & Skills Matching Engine
 Matches candidate skills and geographic location with live job openings and dispatches alerts.
 """
 import re
-from database.db import get_connection, create_notification, get_user_notifications
+try:
+    from database.db import get_connection, create_notification, get_user_notifications
+except ModuleNotFoundError:
+    from db import get_connection, create_notification, get_user_notifications
 
 def calculate_skill_match(candidate_skills_str: str, job_skills_str: str) -> tuple[float, list[str]]:
     """Calculates percentage overlap between candidate skills and job required skills."""

@@ -3,9 +3,13 @@ HireLens AI - Authentication & Registration UI
 Ultra-fast, mobile-responsive, modern sign-in & registration experience.
 """
 import streamlit as st
-from database.db import authenticate_user, register_user
+try:
+    from database.db import authenticate_user, register_user
+    from core.notification_engine import sync_user_job_notifications
+except ModuleNotFoundError:
+    from db import authenticate_user, register_user
+    from notification_engine import sync_user_job_notifications
 from config import KAGGLE_CATEGORIES
-from core.notification_engine import sync_user_job_notifications
 
 def render_login_page():
     st.markdown("""

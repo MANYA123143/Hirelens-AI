@@ -3,8 +3,12 @@ HireLens AI - Candidate Dashboard & Real-Time Alert Hub
 High-speed, mobile-responsive, vibrant career command center.
 """
 import streamlit as st
-from database.db import get_user_notifications, mark_notification_read, get_jobs_near_user
-from core.notification_engine import match_jobs_for_candidate, sync_user_job_notifications
+try:
+    from database.db import get_user_notifications, mark_notification_read, get_jobs_near_user
+    from core.notification_engine import match_jobs_for_candidate, sync_user_job_notifications
+except ModuleNotFoundError:
+    from db import get_user_notifications, mark_notification_read, get_jobs_near_user
+    from notification_engine import match_jobs_for_candidate, sync_user_job_notifications
 
 def render_dashboard():
     user = st.session_state.get("user", {})

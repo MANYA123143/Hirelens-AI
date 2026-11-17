@@ -2,7 +2,10 @@
 HireLens AI - Global Jobs Database Seeder
 Populates rich worldwide job opportunities across cities, states, and countries.
 """
-from database.db import get_connection, insert_job
+try:
+    from database.db import get_connection, insert_job
+except ModuleNotFoundError:
+    from db import get_connection, insert_job
 
 WORLD_CITIES = {
     # United States
