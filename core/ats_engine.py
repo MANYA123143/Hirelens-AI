@@ -1,34 +1,21 @@
 """
 HireLens AI - Comprehensive ATS Score & Resume Analysis Engine
-Evaluates keywords, section completeness, action verbs, metrics, and detects missing values.
-Supports PDF extraction via pypdf and plain text parsing.
+Evaluates Technical, Soft, Leadership, Analytical, and Domain Skills.
+Computes multi-factor ATS score, section completeness, action verbs, metrics, and detects missing values.
 """
 import re
 import io
 import pypdf
 from config import ATS_ACTION_VERBS, ATS_ESSENTIAL_SECTIONS
+
 try:
     from core.dataset_loader import DatasetEngine
+    from core.skills_taxonomy import ALL_SKILLS_LIST, SKILL_CATEGORIES, classify_skill, get_skills_for_category
 except ModuleNotFoundError:
     from dataset_loader import DatasetEngine
+    from skills_taxonomy import ALL_SKILLS_LIST, SKILL_CATEGORIES, classify_skill, get_skills_for_category
 
-# Common tech & domain skills taxonomy for deep keyword extraction
-COMMON_SKILLS_TAXONOMY = [
-    # Programming & Web
-    "python", "javascript", "typescript", "java", "c++", "c#", "go", "rust", "php", "ruby", "swift", "kotlin", "r",
-    "html", "css", "react", "angular", "vue", "next.js", "node.js", "fastapi", "django", "flask", "spring boot",
-    # Data & AI
-    "sql", "nosql", "postgresql", "mysql", "mongodb", "redis", "pandas", "numpy", "scikit-learn", "tensorflow",
-    "pytorch", "machine learning", "deep learning", "nlp", "computer vision", "llms", "data analysis", "tableau", "powerbi",
-    # Cloud & DevOps
-    "aws", "azure", "gcp", "docker", "kubernetes", "terraform", "ci/cd", "git", "linux", "jenkins", "ansible", "api", "rest api",
-    # Design
-    "figma", "adobe xd", "photoshop", "illustrator", "wireframing", "prototyping", "user research", "ui/ux",
-    # Business, Sales & Marketing
-    "b2b", "crm", "salesforce", "lead generation", "seo", "sem", "google analytics", "digital marketing",
-    "financial modeling", "gaap", "quickbooks", "excel", "budgeting", "risk management", "project management",
-    "agile", "scrum", "recruitment", "talent acquisition", "hrms", "payroll"
-]
+COMMON_SKILLS_TAXONOMY = ALL_SKILLS_LIST
 
 def extract_text_from_pdf(pdf_file_bytes) -> str:
     """Extracts raw text content from uploaded PDF bytes using pypdf."""
@@ -44,14 +31,14 @@ def extract_text_from_pdf(pdf_file_bytes) -> str:
         return f"Error reading PDF: {e}"
 
 def extract_skills_from_text(text: str) -> list[str]:
-    """Extracts recognized industry skills using optimized pattern matching."""
+    """Extracts all recognized technical and non-technical skills using optimized pattern matching."""
     text_lower = f" {text.lower()} "
     # Pre-extract alphanumeric tokens for O(1) single-word lookups
     words_set = set(re.findall(r'[a-z0-9#+.-]+', text_lower))
     found = []
-    for skill in COMMON_SKILLS_TAXONOMY:
+    for skill in ALL_SKILLS_LIST:
         if " " in skill or "." in skill or "-" in skill or "/" in skill:
-            # Multi-word or special skill
+            # Multi-word or hyphenated skill phrase
             if skill in text_lower:
                 found.append(skill)
         else:
@@ -67,7 +54,7 @@ def detect_sections(text: str) -> dict[str, bool]:
         "Professional Summary": bool(re.search(r'\b(summary|objective|profile|about me|professional summary)\b', text_lower)),
         "Work Experience": bool(re.search(r'\b(experience|employment|work history|professional experience|internship|career history)\b', text_lower)),
         "Education": bool(re.search(r'\b(education|academic|degree|university|college|b\.tech|bachelor|master|phd|diploma)\b', text_lower)),
-        "Skills": bool(re.search(r'\b(skills|technical skills|competencies|technologies|proficiencies|expertise)\b', text_lower)),
+        "Skills": bool(re.search(r'\b(skills|technical skills|soft skills|competencies|technologies|proficiencies|expertise)\b', text_lower)),
         "Projects": bool(re.search(r'\b(projects|key projects|academic projects|personal projects|portfolio)\b', text_lower))
     }
     return sections
@@ -93,7 +80,6 @@ def detect_quantifiable_metrics(text: str) -> list[str]:
     matches = []
     for p in patterns:
         for m in re.finditer(p, text, re.IGNORECASE):
-            # Capture short context window around metric
             start = max(0, m.start() - 25)
             end = min(len(text), m.end() + 25)
             snippet = text[start:end].strip().replace("\n", " ")
@@ -101,31 +87,65 @@ def detect_quantifiable_metrics(text: str) -> list[str]:
                 matches.append(snippet)
     return matches[:8]
 
+def categorize_skills_list(skills: list[str]) -> dict[str, list[str]]:
+    """Groups a list of skills into Technical, Soft, Leadership, Analytical, and Business categories."""
+    grouped = {
+        "Technical & Software": [],
+        "Soft & Interpersonal": [],
+        "Leadership & Management": [],
+        "Analytical & Problem Solving": [],
+        "Business & Domain": []
+    }
+    for sk in skills:
+        cat = classify_skill(sk)
+        if cat in grouped:
+            grouped[cat].append(sk)
+        elif cat in ["HR, People & Operations", "Finance, Accounting & Banking", "Healthcare & Medical", "Design & Creative", "Education & Instruction", "Legal, Compliance & Policy", "Hospitality, Fitness & Culinary", "Business, Sales & Marketing"]:
+            grouped["Business & Domain"].append(sk)
+        else:
+            grouped["Technical & Software"].append(sk)
+    return {k: v for k, v in grouped.items() if v}
+
 def analyze_resume_ats(resume_text: str, target_category: str = "INFORMATION-TECHNOLOGY", job_description: str = "") -> dict:
     """
     Comprehensive ATS Analysis Engine.
-    Returns scores, breakdowns, matched skills, missing values, and detailed feedback.
+    Evaluates both technical and non-technical skills, section completeness, action verbs, metrics, and detects gaps.
     """
     dataset_engine = DatasetEngine.get_instance()
     text = resume_text.strip()
     word_count = len(text.split())
 
-    # 1. Target Skills Identification
+    # 1. Target Skills Identification (Technical + Non-Technical)
     target_skills = []
     if job_description and len(job_description.strip()) > 30:
         target_skills = extract_skills_from_text(job_description)
     
     if not target_skills:
-        category_benchmark_skills = dataset_engine.get_category_skills(target_category)
+        category_benchmark_skills = get_skills_for_category(target_category)
         target_skills = [s.lower() for s in category_benchmark_skills]
 
-    # 2. Extract Candidate Skills
+    # 2. Extract Candidate Skills (All technical and non-technical)
     candidate_skills = extract_skills_from_text(text)
     
     # 3. Match Skills Calculation
     matched_skills = [s for s in target_skills if s in candidate_skills]
     missing_skills = [s for s in target_skills if s not in candidate_skills]
     
+    # Categorize matched and missing skills into Technical vs Soft/Non-Technical
+    matched_by_cat = categorize_skills_list(matched_skills)
+    missing_by_cat = categorize_skills_list(missing_skills)
+    candidate_by_cat = categorize_skills_list(candidate_skills)
+
+    tech_matched = len(matched_by_cat.get("Technical & Software", []))
+    tech_missing = len(missing_by_cat.get("Technical & Software", []))
+    tech_total = tech_matched + tech_missing
+    tech_match_pct = round((tech_matched / tech_total * 100.0), 1) if tech_total > 0 else 70.0
+
+    soft_matched = sum(len(v) for k, v in matched_by_cat.items() if k != "Technical & Software")
+    soft_missing = sum(len(v) for k, v in missing_by_cat.items() if k != "Technical & Software")
+    soft_total = soft_matched + soft_missing
+    soft_match_pct = round((soft_matched / soft_total * 100.0), 1) if soft_total > 0 else 70.0
+
     skill_match_pct = (len(matched_skills) / len(target_skills) * 100) if target_skills else 70.0
     skill_match_score = min(100.0, round(skill_match_pct, 1))
 
@@ -138,8 +158,8 @@ def analyze_resume_ats(resume_text: str, target_category: str = "INFORMATION-TEC
     found_verbs = detect_action_verbs(text)
     metrics_found = detect_quantifiable_metrics(text)
     
-    verb_score = min(100.0, len(found_verbs) * 10.0)  # 10+ verbs is 100%
-    metric_score = min(100.0, len(metrics_found) * 20.0) # 5+ metrics is 100%
+    verb_score = min(100.0, len(found_verbs) * 10.0)
+    metric_score = min(100.0, len(metrics_found) * 20.0)
     impact_score = round((verb_score * 0.5) + (metric_score * 0.5), 1)
 
     # 6. Readability & Formatting
@@ -153,7 +173,6 @@ def analyze_resume_ats(resume_text: str, target_category: str = "INFORMATION-TEC
         readability_score -= 20.0
         formatting_issues.append("Resume is overly long (> 1200 words). Aim for a concise 1-2 page structure.")
 
-    # Check for email and phone
     has_email = bool(re.search(r'[\w\.-]+@[\w\.-]+\.\w+', text))
     has_phone = bool(re.search(r'(\+?\d[\d -]{8,15}\d)', text))
     has_links = bool(re.search(r'(linkedin\.com|github\.com|portfolio|http)', text, re.IGNORECASE))
@@ -185,23 +204,25 @@ def analyze_resume_ats(resume_text: str, target_category: str = "INFORMATION-TEC
     if overall_score >= 85:
         grade = "A"
         grade_label = "ATS Ready (Excellent)"
-        badge_color = "#10B981" # Green
+        badge_color = "#10B981"
     elif overall_score >= 70:
         grade = "B"
         grade_label = "Competitive (Good)"
-        badge_color = "#3B82F6" # Blue
+        badge_color = "#3B82F6"
     elif overall_score >= 55:
         grade = "C"
         grade_label = "Needs Optimization"
-        badge_color = "#F59E0B" # Yellow
+        badge_color = "#F59E0B"
     else:
         grade = "D"
         grade_label = "Critical Gaps Detected"
-        badge_color = "#EF4444" # Red
+        badge_color = "#EF4444"
 
-    # 9. Missing Values and Gaps Identification (Feeds into Roadmap)
+    # 9. Missing Values and Gaps Identification
     missing_values = {
         "missing_skills": missing_skills,
+        "missing_technical_skills": missing_by_cat.get("Technical & Software", []),
+        "missing_soft_skills": [sk for cat, skl in missing_by_cat.items() if cat != "Technical & Software" for sk in skl],
         "missing_sections": [sec for sec, exists in sections.items() if not exists],
         "lacks_quantifiable_metrics": len(metrics_found) < 3,
         "lacks_action_verbs": len(found_verbs) < 5,
@@ -215,16 +236,22 @@ def analyze_resume_ats(resume_text: str, target_category: str = "INFORMATION-TEC
 
     # 10. High-Impact Recommendations
     recommendations = []
-    if missing_skills:
-        top_missing = ", ".join(missing_skills[:5])
-        recommendations.append(f"Add relevant keywords and practical experience with: **{top_missing}**.")
+    if missing_by_cat.get("Technical & Software"):
+        top_tech = ", ".join(missing_by_cat["Technical & Software"][:4])
+        recommendations.append(f"Add technical expertise and project proof for: **{top_tech}**.")
+    
+    missing_soft_list = missing_values["missing_soft_skills"]
+    if missing_soft_list:
+        top_soft = ", ".join(missing_soft_list[:4])
+        recommendations.append(f"Demonstrate non-technical & soft skills with examples: **{top_soft}**.")
+
     if missing_values["missing_sections"]:
         sec_list = ", ".join(missing_values["missing_sections"])
         recommendations.append(f"Include dedicated sections for: **{sec_list}**.")
     if missing_values["lacks_quantifiable_metrics"]:
-        recommendations.append("Quantify your achievements using numbers (e.g., 'Improved performance by 35%', 'Managed $50k budget').")
+        recommendations.append("Quantify your achievements using numbers (e.g., 'Improved response time by 35%', 'Managed $50k budget').")
     if missing_values["lacks_action_verbs"]:
-        recommendations.append("Begin bullet points with strong power action verbs (e.g., 'Spearheaded', 'Engineered', 'Optimized').")
+        recommendations.append("Begin bullet points with strong power action verbs (e.g., 'Spearheaded', 'Engineered', 'Optimized', 'Negotiated').")
     if not has_links:
         recommendations.append("Add your LinkedIn profile URL and GitHub or online portfolio link at the top.")
 
@@ -236,12 +263,17 @@ def analyze_resume_ats(resume_text: str, target_category: str = "INFORMATION-TEC
         "word_count": word_count,
         "sub_scores": {
             "skill_match": skill_match_score,
+            "technical_match": tech_match_pct,
+            "soft_match": soft_match_pct,
             "section_completeness": section_score,
             "impact_metrics": impact_score,
             "readability_formatting": readability_score
         },
         "matched_skills": matched_skills,
         "missing_skills": missing_skills,
+        "matched_by_category": matched_by_cat,
+        "missing_by_category": missing_by_cat,
+        "candidate_by_category": candidate_by_cat,
         "candidate_skills": candidate_skills,
         "target_skills": target_skills,
         "sections_audit": sections,

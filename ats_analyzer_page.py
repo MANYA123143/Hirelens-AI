@@ -1,17 +1,22 @@
 """
 HireLens AI - AI Resume Analysis & ATS Checker Page
 High-speed, mobile-responsive, visual gauge & radar scoring engine.
+Evaluates both Technical and Non-Technical / Soft / Leadership skills.
 """
 import streamlit as st
 import plotly.graph_objects as go
+
 try:
     from core.ats_engine import analyze_resume_ats, extract_text_from_pdf
     from core.dataset_loader import DatasetEngine
+    from core.skills_taxonomy import SKILL_CATEGORIES
     from database.db import save_user_resume
 except ModuleNotFoundError:
     from ats_engine import analyze_resume_ats, extract_text_from_pdf
     from dataset_loader import DatasetEngine
+    from skills_taxonomy import SKILL_CATEGORIES
     from db import save_user_resume
+
 from config import KAGGLE_CATEGORIES
 
 def render_ats_analyzer():
@@ -21,7 +26,7 @@ def render_ats_analyzer():
             🎯 AI Resume Analysis & ATS Checker
         </h2>
         <p style="color: #94A3B8; margin: 0; font-size: 13.5px;">
-            Benchmark your resume against 2,484 profiles from the Kaggle Resume dataset and eliminate rejection bottlenecks.
+            Benchmark your resume against 2,484 profiles from the Kaggle Resume dataset across all <strong>Technical</strong> and <strong>Non-Technical / Soft Skills</strong>.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -80,7 +85,7 @@ def render_ats_analyzer():
         job_desc = st.text_area(
             "Job Description (Optional for custom matching)",
             height=140,
-            placeholder="Paste target job description to compute precision keyword match..."
+            placeholder="Paste target job description to compute precision technical and soft skill match..."
         )
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -91,7 +96,7 @@ def render_ats_analyzer():
             st.error("Please supply a resume with at least 40 words to analyze.")
             return
 
-        with st.spinner("Computing keyword taxonomy, section completeness, action verbs, and ATS compatibility..."):
+        with st.spinner("Auditing technical skills, soft skills, leadership, action verbs, and ATS compatibility..."):
             result = analyze_resume_ats(
                 resume_text=resume_text,
                 target_category=target_category,
@@ -101,7 +106,6 @@ def render_ats_analyzer():
             st.session_state["analyzed_resume_text"] = resume_text
             st.session_state["analyzed_category"] = target_category
 
-            # Celebrate high score!
             if result["overall_score"] >= 80:
                 st.balloons()
 
@@ -161,15 +165,19 @@ def render_ats_analyzer():
             st.plotly_chart(fig_gauge, use_container_width=True)
 
         with col_g2:
-            # Multi-Dimensional Radar Spider Chart
-            categories_radar = ['Skill Fit', 'Sections', 'Action Verbs', 'Metrics', 'Readability']
-            values_radar = [
-                sub['skill_match'],
-                sub['section_completeness'],
-                min(100.0, len(res['found_verbs']) * 12.0),
-                min(100.0, len(res['metrics_found']) * 25.0),
-                sub['readability_formatting']
-            ]
+            # 6-Axis Multi-Dimensional Radar Chart (Technical + Soft + Management)
+            categories_radar = ['Technical Skills', 'Soft Skills', 'Leadership & Ops', 'Problem Solving', 'ATS Sections', 'Impact Metrics']
+            
+            cand_by_cat = res.get("candidate_by_category", {})
+            tech_val = sub.get('technical_match', 70.0)
+            soft_val = sub.get('soft_match', 70.0)
+            lead_val = min(100.0, len(cand_by_cat.get("Leadership & Management", [])) * 25.0 + 30.0)
+            prob_val = min(100.0, len(cand_by_cat.get("Analytical & Problem Solving", [])) * 25.0 + 30.0)
+            sec_val = sub['section_completeness']
+            imp_val = sub['impact_metrics']
+
+            values_radar = [tech_val, soft_val, lead_val, prob_val, sec_val, imp_val]
+            
             fig_radar = go.Figure(data=go.Scatterpolar(
                 r=values_radar,
                 theta=categories_radar,
@@ -186,48 +194,55 @@ def render_ats_analyzer():
                 font=dict(color="#F8FAFC"),
                 showlegend=False,
                 height=260,
-                margin=dict(l=30, r=30, t=30, b=30)
+                margin=dict(l=35, r=35, t=30, b=30)
             )
             st.plotly_chart(fig_radar, use_container_width=True)
 
         # 4 Sub-score metrics
         sc1, sc2, sc3, sc4 = st.columns(4)
         with sc1:
-            st.metric("Skill Match", f"{sub['skill_match']}%")
+            st.metric("Technical Fit", f"{sub.get('technical_match', sub['skill_match'])}%", help="Match on hard technical & software skills")
         with sc2:
-            st.metric("Sections Audit", f"{sub['section_completeness']}%")
+            st.metric("Soft & Leadership Fit", f"{sub.get('soft_match', sub['skill_match'])}%", help="Match on communication, teamwork, and management skills")
         with sc3:
-            st.metric("Action & Metrics", f"{sub['impact_metrics']}%")
+            st.metric("Section Completeness", f"{sub['section_completeness']}%", help="Audit of 6 essential ATS resume sections")
         with sc4:
-            st.metric("Format & Length", f"{sub['readability_formatting']}%")
+            st.metric("Action & Impact Metrics", f"{sub['impact_metrics']}%", help="Power action verbs and measurable quantifiable metrics")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # Tabs for breakdown
-        tab_skills, tab_sections, tab_verbs, tab_recs = st.tabs([
-            "🎯 Skills Gap Analysis",
+        # Categorized Skills Tabs
+        tab_skills_all, tab_sections, tab_verbs, tab_recs = st.tabs([
+            "🎯 Skills Breakdown (Technical + Non-Technical)",
             "📋 Sections Audit",
             "⚡ Action Verbs & Metrics",
             "💡 High-Impact Recommendations"
         ])
 
-        with tab_skills:
+        with tab_skills_all:
+            matched_by_cat = res.get("matched_by_category", {})
+            missing_by_cat = res.get("missing_by_category", {})
+
             col_sk1, col_sk2 = st.columns(2)
             with col_sk1:
                 st.markdown("#### ✅ Matched Skills in Resume")
-                if res["matched_skills"]:
-                    tags = "".join([f'<span class="skill-badge skill-badge-matched">✓ {s}</span>' for s in res["matched_skills"]])
-                    st.markdown(tags, unsafe_allow_html=True)
-                else:
+                if not matched_by_cat:
                     st.warning("No explicit target skills detected.")
+                else:
+                    for cat_title, skill_list in matched_by_cat.items():
+                        st.markdown(f"**{cat_title} ({len(skill_list)})**")
+                        tags = "".join([f'<span class="skill-badge skill-badge-matched">✓ {s}</span>' for s in skill_list])
+                        st.markdown(tags, unsafe_allow_html=True)
 
             with col_sk2:
                 st.markdown("#### ❌ Missing Critical Skills (Gaps)")
-                if res["missing_skills"]:
-                    tags = "".join([f'<span class="skill-badge skill-badge-missing">✗ {s}</span>' for s in res["missing_skills"]])
-                    st.markdown(tags, unsafe_allow_html=True)
-                else:
+                if not missing_by_cat:
                     st.success("All target skills matched!")
+                else:
+                    for cat_title, skill_list in missing_by_cat.items():
+                        st.markdown(f"**{cat_title} ({len(skill_list)})**")
+                        tags = "".join([f'<span class="skill-badge skill-badge-missing">✗ {s}</span>' for s in skill_list])
+                        st.markdown(tags, unsafe_allow_html=True)
 
         with tab_sections:
             st.markdown("#### 📋 Essential Resume Sections Check")
@@ -246,7 +261,7 @@ def render_ats_analyzer():
                 if res["found_verbs"]:
                     st.write(", ".join([v.title() for v in res["found_verbs"]]))
                 else:
-                    st.warning("No strong action verbs found. Replace passive phrases with verbs like 'Spearheaded', 'Optimized', 'Engineered'.")
+                    st.warning("No strong action verbs found. Replace passive phrases with verbs like 'Spearheaded', 'Optimized', 'Engineered', 'Negotiated'.")
 
             with col_v2:
                 st.markdown(f"#### 📈 Measurable Metrics Found ({len(res['metrics_found'])})")
@@ -263,7 +278,7 @@ def render_ats_analyzer():
 
         # CTA for Roadmap
         st.markdown("<br>", unsafe_allow_html=True)
-        st.info("🎯 **Next Step:** We have generated a step-by-step career and project roadmap to eliminate the missing skills and gaps detected in this analysis!")
+        st.info("🎯 **Next Step:** We have generated a step-by-step career and project roadmap to eliminate the missing technical and soft skills detected in this analysis!")
         if st.button("🗺️ View Personalized Missing Values Roadmap", type="primary", use_container_width=True):
             st.session_state["current_page"] = "roadmap"
             st.rerun()

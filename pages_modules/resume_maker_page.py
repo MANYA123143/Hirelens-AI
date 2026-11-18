@@ -200,16 +200,19 @@ def render_resume_maker():
                     placeholder="Write a concise overview highlighting your core competencies..."
                 )
 
-        # 3. Skills
-        with st.expander("🛠️ 3. Skills & Competencies", expanded=True):
+        # 3. Skills (Technical + Non-Technical / Soft Skills)
+        with st.expander("🛠️ 3. Skills & Competencies (Technical & Non-Technical)", expanded=True):
+            st.caption("Recruiters and ATS systems screen for both hard technical capabilities and essential non-technical/soft skills.")
             sk = resume_data["skills"]
             c_sk1, c_sk2 = st.columns(2)
             with c_sk1:
-                sk["Languages"] = st.text_input("Programming Languages", value=sk.get("Languages", ""), placeholder="Python, Java, C++, SQL")
-                sk["Frameworks"] = st.text_input("Frameworks & Libraries", value=sk.get("Frameworks", ""), placeholder="React, FastAPI, Spring Boot")
+                st.markdown("**💻 Technical Skills**")
+                sk["Languages"] = st.text_input("Programming / Core Tools", value=sk.get("Languages", ""), placeholder="e.g. Python, Java, SQL, Figma, AutoCAD, QuickBooks")
+                sk["Frameworks"] = st.text_input("Frameworks, Cloud & DevOps", value=sk.get("Frameworks", ""), placeholder="e.g. React, Docker, AWS, FastAPI, Linux, Git")
             with c_sk2:
-                sk["Tools & Cloud"] = st.text_input("Tools, Cloud & DevOps", value=sk.get("Tools & Cloud", ""), placeholder="AWS, Docker, Git, Linux")
-                sk["Soft Skills"] = st.text_input("Soft Skills & Methodologies", value=sk.get("Soft Skills", ""), placeholder="Agile, Problem Solving, Team Leadership")
+                st.markdown("**🤝 Non-Technical & Leadership Skills**")
+                sk["Soft Skills"] = st.text_input("Soft & Interpersonal Skills", value=sk.get("Soft Skills", ""), placeholder="e.g. Communication, Active Listening, Teamwork, Empathy, Adaptability")
+                sk["Tools & Cloud"] = st.text_input("Leadership, Management & Problem Solving", value=sk.get("Tools & Cloud", ""), placeholder="e.g. Leadership, Project Management, Agile, Critical Thinking, Negotiation")
 
         # 4. Experience
         with st.expander("💼 4. Work & Internship Experience", expanded=True):

@@ -1,10 +1,12 @@
 """
 HireLens AI - Missing Values & Skills Career Roadmap Generator
 Constructs a personalized 4-phase learning and portfolio roadmap to bridge identified resume gaps.
+Supports both Technical and Non-Technical / Soft / Leadership skills.
 """
 
-# Resource and project guides mapped to commonly missing skills
+# Resource and project guides mapped to commonly missing skills (Technical + Non-Technical)
 SKILL_LEARNING_GUIDES = {
+    # Technical Skills
     "python": {
         "title": "Python for Software Engineering & Data",
         "resources": ["Official Python Docs (docs.python.org)", "freeCodeCamp Python Masterclass", "Automate the Boring Stuff"],
@@ -69,13 +71,60 @@ SKILL_LEARNING_GUIDES = {
         "title": "Modern Talent Acquisition & Sourcing",
         "resources": ["LinkedIn Talent Solutions Guides", "SHRM Talent Acquisition Resources"],
         "project": "Design a complete end-to-end recruitment funnel, candidate scoring rubrics, and ATS onboarding workflow."
+    },
+
+    # Non-Technical & Soft Skills
+    "communication": {
+        "title": "Executive Communication & Technical Storytelling",
+        "resources": ["Think Fast, Talk Smart (Stanford GSB)", "Harvard Business Review Guide to Persuasive Presentations", "Toastmasters Public Speaking Guides"],
+        "project": "Draft a formal technical executive summary and slide deck explaining a complex system to non-technical stakeholders."
+    },
+    "leadership": {
+        "title": "Modern Team Leadership & Influence",
+        "resources": ["The Making of a Manager by Julie Zhuo", "Radical Candor Framework", "Coursera Strategic Leadership Specialization"],
+        "project": "Develop a structured operational leadership playbook covering team 1-on-1s, OKRs, and constructive feedback rubrics."
+    },
+    "problem solving": {
+        "title": "Structured Problem Solving & Root Cause Analysis",
+        "resources": ["McKinsey 7-Step Problem Solving Framework", "The 5 Whys & Ishikawa Diagram Method", "Critical Thinking for Decision Makers"],
+        "project": "Conduct an in-depth post-mortem investigation on a simulated operational bottleneck and document preventative SOPs."
+    },
+    "teamwork": {
+        "title": "Cross-Functional Collaboration & Team Dynamics",
+        "resources": ["Google's Project Aristotle on Psychological Safety", "Atlassian Team Playbook", "Crucial Conversations"],
+        "project": "Coordinate a cross-disciplinary team charter establishing code-review SLAs, meeting etiquette, and shared goals."
+    },
+    "negotiation": {
+        "title": "High-Stakes Business Negotiation & Influence",
+        "resources": ["Never Split the Difference by Chris Voss", "Harvard Program on Negotiation (PON)", "Getting to Yes Framework"],
+        "project": "Formulate a vendor procurement negotiation matrix outlining BATNA, trade-offs, and risk allocation terms."
+    },
+    "time management": {
+        "title": "High-Velocity Prioritization & Execution",
+        "resources": ["Getting Things Done (GTD) Method", "Deep Work Principles by Cal Newport", "Eisenhower Matrix Prioritization"],
+        "project": "Design an automated personal task triage board categorizing work by urgency and impact with weekly review cadences."
+    },
+    "active listening": {
+        "title": "Active Listening & Stakeholder Empathy",
+        "resources": ["Nonviolent Communication by Marshall Rosenberg", "Harvard Program on Negotiation Listening Labs", "MindTools Active Listening"],
+        "project": "Execute 5 stakeholder discovery interviews, synthesizing key unstated pain points into actionable feature requirements."
+    },
+    "conflict resolution": {
+        "title": "Workplace Conflict Resolution & De-escalation",
+        "resources": ["Thomas-Kilmann Conflict Mode Instrument", "Crucial Conversations Methodology", "Mediation & Dispute Resolution Guides"],
+        "project": "Draft a conflict resolution protocol for addressing technical architectural disagreements productively."
+    },
+    "agile": {
+        "title": "Agile Delivery & Scrum Orchestration",
+        "resources": ["Official Scrum Guide (scrumguides.org)", "Atlassian Agile Coach", "Google Agile Project Management Course"],
+        "project": "Set up a Jira/GitHub Projects sprint board with user stories, acceptance criteria, and burndown chart metrics."
     }
 }
 
 def generate_missing_values_roadmap(ats_analysis_result: dict, candidate_name: str = "Candidate", target_category: str = "Target Domain") -> dict:
     """
     Constructs a detailed 4-phase step-by-step roadmap to eliminate missing values,
-    acquire missing skills, and maximize ATS score.
+    acquire missing technical and non-technical skills, and maximize ATS score.
     """
     missing_vals = ats_analysis_result.get("missing_values", {})
     missing_skills = ats_analysis_result.get("missing_skills", [])
@@ -123,7 +172,7 @@ def generate_missing_values_roadmap(ats_analysis_result: dict, candidate_name: s
 
     if missing_vals.get("lacks_action_verbs", False):
         phase1_tasks.append({
-            "task": "Replace passive verbs ('was responsible for') with power action verbs ('Spearheaded', 'Engineered', 'Optimized').",
+            "task": "Replace passive verbs ('was responsible for') with power action verbs ('Spearheaded', 'Engineered', 'Optimized', 'Negotiated').",
             "type": "ATS Language",
             "impact": "Medium"
         })
@@ -135,7 +184,6 @@ def generate_missing_values_roadmap(ats_analysis_result: dict, candidate_name: s
             "impact": "Medium"
         })
 
-    # Default tasks if resume is already clean
     if not phase1_tasks:
         phase1_tasks.append({
             "task": "Perform a final typography and spacing check to ensure standard 10-12pt font hierarchy.",
@@ -158,14 +206,14 @@ def generate_missing_values_roadmap(ats_analysis_result: dict, candidate_name: s
 
     # ==================== PHASE 2: TARGETED SKILL ACQUISITION (Weeks 1 - 3) ====================
     phase2_tasks = []
-    top_skills_to_learn = missing_skills[:6] if missing_skills else ["advanced cloud concepts", "system architecture", "automated testing"]
+    top_skills_to_learn = missing_skills[:8] if missing_skills else ["communication", "problem solving", "leadership", "agile", "cloud computing"]
 
     for skill in top_skills_to_learn:
         skill_key = skill.lower()
         guide = SKILL_LEARNING_GUIDES.get(skill_key, {
             "title": f"Mastery of {skill.title()}",
-            "resources": [f"Official documentation for {skill}", f"Top-rated crash course on freeCodeCamp / Coursera", f"Hands-on exercises for {skill}"],
-            "project": f"Create a mini-project implementing {skill} to demonstrate practical competence."
+            "resources": [f"Curated guides & best practices for {skill}", f"Interactive masterclass on Coursera / YouTube", f"Practical application exercise for {skill}"],
+            "project": f"Create a concrete deliverable implementing {skill} to demonstrate practical competence."
         })
         phase2_tasks.append({
             "skill": skill.title(),
@@ -176,63 +224,62 @@ def generate_missing_values_roadmap(ats_analysis_result: dict, candidate_name: s
 
     phases.append({
         "phase_number": 2,
-        "title": "Phase 2: Core Missing Skills Mastery",
+        "title": "Phase 2: Core Missing Skills Mastery (Technical & Soft)",
         "duration": "2 – 3 Weeks",
-        "description": "Systematically learn and practice the critical domain skills currently absent from your resume.",
+        "description": "Systematically learn and practice both hard technical and essential soft/leadership skills currently absent from your resume.",
         "skills_plan": phase2_tasks
     })
 
     # ==================== PHASE 3: PORTFOLIO & PROOF-OF-WORK (Weeks 3 - 5) ====================
     phase3_projects = []
     
-    # Generate project ideas incorporating the missing skills
     if missing_skills:
-        skill_combos = [missing_skills[i:i+2] for i in range(0, min(len(missing_skills), 4), 2)]
+        skill_combos = [missing_skills[i:i+2] for i in range(0, min(len(missing_skills), 6), 2)]
         for idx, combo in enumerate(skill_combos, 1):
             combo_str = " + ".join([s.title() for s in combo])
             phase3_projects.append({
-                "project_title": f"Production-Ready Application utilizing {combo_str}",
+                "project_title": f"Applied Professional Project utilizing {combo_str}",
                 "deliverables": [
-                    f"Full repository with clean README, architecture diagram, and deployment instructions.",
-                    f"Active live demo or recorded Loom walkthrough.",
+                    f"Comprehensive project repository or case study with clear README, deliverables, and measurable outcomes.",
+                    f"Active demonstration or interactive artifact proving hands-on mastery of {combo_str}.",
                     f"Craft 3 resume bullet points highlighting the impact and {combo_str} integration."
                 ],
-                "recommended_bullet": f"Engineered a scalable system utilizing {combo_str}, cutting execution latency by 35% and serving 1,000+ simulated requests."
+                "recommended_bullet": f"Spearheaded initiatives utilizing {combo_str}, cutting cycle times by 30% and elevating team output across multi-disciplinary workflows."
             })
     else:
         phase3_projects.append({
-            "project_title": "Enterprise Full-Stack Architecture",
+            "project_title": "Enterprise Strategic Execution",
             "deliverables": [
-                "Implement automated CI/CD pipeline and comprehensive unit/integration test coverage.",
-                "Deploy on cloud infrastructure with monitoring and metrics dashboard."
+                "Implement end-to-end operational workflows with rigorous quality benchmarks.",
+                "Deploy with real-time performance tracking and executive reporting dashboard."
             ],
-            "recommended_bullet": "Spearheaded design and deployment of enterprise application, achieving 99.9% uptime and streamlining user onboarding by 45%."
+            "recommended_bullet": "Directed cross-functional execution of core strategic framework, improving operational velocity by 40% and ensuring 100% regulatory compliance."
         })
 
     phases.append({
         "phase_number": 3,
         "title": "Phase 3: Proof-of-Skill Portfolio Projects",
         "duration": "2 – 3 Weeks",
-        "description": "Build high-impact, tangible projects that prove competence in the newly acquired skills.",
+        "description": "Build high-impact, tangible projects that prove competence in both newly acquired technical tools and soft skills.",
         "projects": phase3_projects
     })
 
     # ==================== PHASE 4: CERTIFICATION, ATS RESCAN & APPLICATIONS (Week 6) ====================
     phase4_steps = [
         {
-            "step": "Select 1 recognized industry certification (e.g., AWS Certified Cloud Practitioner, GitHub Foundations, or Domain Specialization).",
+            "step": "Obtain 1 recognized credential or certification (e.g. AWS Cloud Practitioner, PMP / Scrum Master, or Domain Specialization).",
             "timeline": "Days 1–7"
         },
         {
-            "step": "Update your resume with the new projects, skills, and quantifiable achievements using HireLens Resume Maker.",
+            "step": "Update your resume with new technical projects and quantifiable soft skill achievements using HireLens Resume Maker.",
             "timeline": "Day 8"
         },
         {
-            "step": "Re-run the HireLens ATS Checker to verify your score has reached 88% - 98%.",
+            "step": "Re-run the HireLens ATS Checker to verify your score has reached 90% - 98%.",
             "timeline": "Day 9"
         },
         {
-            "step": "Target and apply for the matched jobs in your City/State on the HireLens Job Opportunities board.",
+            "step": "Apply to matched local positions in your City/State on the HireLens Job Opportunities board.",
             "timeline": "Day 10+"
         }
     ]
