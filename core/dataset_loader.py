@@ -1,7 +1,7 @@
 """
 HireLens AI - Kaggle Resume Dataset Loader & Intelligence Engine
 Loads and indexes the 2,484 resumes from Divyaamith/Kaggle-Resume.
-Extracts domain vocabularies, category benchmarks, and provides TF-IDF category prediction.
+Extracts domain vocabularies, category benchmarks, and provides TF-IDF / keyword category prediction.
 """
 import os
 import csv
@@ -10,6 +10,33 @@ import re
 from collections import Counter
 import streamlit as st
 from config import DATASET_PATH, BENCHMARK_PATH, KAGGLE_CATEGORIES
+
+CATEGORY_DOMAIN_INDICATORS = {
+    "ACCOUNTANT": ["accountant", "accounting", "cpa", "audit", "general ledger", "balance sheet", "taxation", "reconciliation", "gaap", "financial statements", "accounts payable", "bookkeeping", "payroll"],
+    "ADVOCATE": ["advocate", "lawyer", "attorney", "legal", "litigation", "counsel", "court", "law firm", "contracts", "juris", "llb", "paralegal"],
+    "AGRICULTURE": ["agriculture", "agronomy", "crop", "farming", "soil science", "irrigation", "sustainable farming", "harvest", "pest control", "fertilizer", "horticulture"],
+    "APPAREL": ["apparel", "fashion", "garment", "textile", "clothing", "pattern making", "fashion design", "merchandiser", "draping", "tailoring", "couture"],
+    "ARTS": ["fine arts", "artist", "illustration", "curator", "museum", "gallery", "sculpture", "painting", "visual arts", "digital art", "exhibition"],
+    "AUTOMOBILE": ["automotive", "vehicle", "automobile", "powertrain", "chassis", "oem", "engine repair", "cad/cam", "dealership", "mechanic", "braking systems"],
+    "AVIATION": ["aviation", "aircraft", "airline", "flight", "pilot", "avionics", "aerospace", "faa", "airport", "air traffic", "maintenance engineer"],
+    "BANKING": ["banking", "bank", "credit analysis", "wealth management", "commercial banking", "retail banking", "loan officer", "branch manager", "kyc", "aml", "mortgage"],
+    "BPO": ["bpo", "call center", "customer support", "telecalling", "inbound", "outbound", "voice process", "ticketing", "teleperformance", "sla", "customer service representative"],
+    "BUSINESS-DEVELOPMENT": ["business development", "marketing", "business strategy", "strategic partnerships", "market expansion", "lead generation", "mba", "client acquisition", "growth", "b2b", "revenue"],
+    "CHEF": ["chef", "culinary", "cook", "kitchen", "pastry", "sous chef", "menu planning", "restaurant", "catering", "fine dining", "food safety", "haccp"],
+    "CONSTRUCTION": ["construction", "civil engineering", "structural", "site engineer", "bim", "autocad", "osha", "contractor", "blueprints", "site supervisor", "concrete"],
+    "CONSULTANT": ["consultant", "consulting", "management consulting", "advisory", "strategy consultant", "mckinsey", "bain", "bcg", "kpi", "process optimization", "transformation"],
+    "DESIGNER": ["designer", "ui/ux", "graphic designer", "figma", "photoshop", "wireframing", "interaction design", "user experience", "visual design", "design system"],
+    "DIGITAL-MEDIA": ["digital media", "social media", "content creator", "seo", "sem", "video editing", "copywriting", "social media marketing", "influencer", "youtube", "digital marketing"],
+    "ENGINEERING": ["mechanical engineer", "electrical engineer", "solidworks", "robotics", "plc", "thermodynamics", "manufacturing", "mechatronics", "hardware engineer"],
+    "FINANCE": ["finance", "financial analyst", "financial modeling", "investment", "portfolio", "dcf", "valuation", "equity research", "asset management", "hedge fund", "fp&a"],
+    "FITNESS": ["fitness", "personal trainer", "gym", "workout", "nutrition", "strength training", "bodybuilding", "exercise physiology", "kinesiology", "wellness", "coach"],
+    "HEALTHCARE": ["healthcare", "hospital", "nurse", "nursing", "clinical", "patient care", "medical", "doctor", "physician", "ehr", "emr", "clinic", "bls"],
+    "HR": ["human resources", "hr", "recruiter", "talent acquisition", "recruitment", "onboarding", "employee relations", "payroll administration", "hrms", "workday", "people operations"],
+    "INFORMATION-TECHNOLOGY": ["software", "developer", "programmer", "python", "java", "sql", "aws", "docker", "kubernetes", "cloud", "full stack", "backend", "frontend", "devops", "cybersecurity", "it"],
+    "PUBLIC-RELATIONS": ["public relations", "pr", "press release", "media relations", "spokesperson", "crisis communication", "corporate communications", "publicist", "media outreach"],
+    "SALES": ["sales", "account executive", "sales representative", "cold calling", "inside sales", "pipeline management", "quota", "salesforce", "closing deals", "b2b sales"],
+    "TEACHER": ["teacher", "teaching", "educator", "curriculum", "school", "classroom", "lesson planning", "pedagogy", "student", "faculty", "lecturer", "professor"]
+}
 
 class DatasetEngine:
     _instance = None
@@ -58,39 +85,37 @@ class DatasetEngine:
                     cat = row[3].strip()
                     counts[cat] += 1
                     if cat not in samples:
+                        clean_text = re.sub(r'<[^>]+>', ' ', row[2])
+                        clean_text = ' '.join(clean_text.split())
                         samples[cat] = {
                             "id": row[0],
-                            "category": cat,
-                            "snippet": row[1][:600],
-                            "full_text": row[1][:3000]
+                            "snippet": clean_text[:400],
+                            "full_text": clean_text
                         }
+
         self.category_counts = dict(counts)
         self.sample_resumes = samples
-
-    def get_categories(self):
-        return sorted(list(self.categories))
+        self.benchmark_data = {
+            "counts": self.category_counts,
+            "samples": self.sample_resumes
+        }
 
     def get_category_counts(self):
         return self.category_counts
 
-    def get_category_skills(self, category):
-        """Returns benchmark skills for a given category."""
-        clean_cat = category.strip().upper()
-        if clean_cat in self.category_skills:
-            return self.category_skills[clean_cat]
-        return ["communication", "project management", "problem solving", "teamwork", "leadership", "analytics"]
+    def get_categories(self):
+        return self.categories
 
     def get_sample_resume(self, category):
-        """Returns sample text of a real resume from the dataset."""
-        clean_cat = category.strip().upper()
-        if clean_cat in self.sample_resumes:
-            return self.sample_resumes[clean_cat]["full_text"]
-        return "Experienced professional with background in target domain."
+        """Returns full text of sample resume for given category."""
+        if category in self.sample_resumes:
+            return self.sample_resumes[category].get("full_text", "")
+        return f"Sample resume content for category: {category}"
 
     def search_resumes(self, keyword="", category="All", limit=10):
-        """Searches through the Kaggle Resume dataset or cached benchmark samples."""
-        clean_keyword = keyword.lower().strip()
+        """High-speed streaming search through Kaggle dataset resumes."""
         results = []
+        clean_keyword = keyword.strip().lower()
 
         if os.path.exists(DATASET_PATH):
             try:
@@ -100,23 +125,27 @@ class DatasetEngine:
                     for row in reader:
                         if len(row) < 4:
                             continue
-                        res_id, res_str, res_html, cat = row[0], row[1], row[2], row[3].strip()
-                        if category != "All" and cat != category:
-                            continue
-                        if clean_keyword and clean_keyword not in res_str.lower():
+                        r_id = row[0]
+                        r_text = row[1]
+                        r_cat = row[3].strip()
+
+                        if category != "All" and r_cat != category:
                             continue
 
-                        snippet = res_str[:300].strip().replace("\n", " ")
+                        if clean_keyword and clean_keyword not in r_text.lower():
+                            continue
+
+                        snippet = r_text[:280] + "..." if len(r_text) > 280 else r_text
                         results.append({
-                            "id": res_id,
-                            "category": cat,
+                            "id": r_id,
+                            "category": r_cat,
                             "snippet": snippet,
-                            "full_text": res_str
+                            "full_text": r_text
                         })
+
                         if len(results) >= limit:
                             break
-                if results:
-                    return results
+                return results
             except Exception as e:
                 print(f"Error reading {DATASET_PATH}: {e}")
 
@@ -138,21 +167,32 @@ class DatasetEngine:
         return results
 
     def predict_category(self, resume_text):
-        """Predicts the most probable job category for any resume using keyword density matching."""
+        """Predicts the most probable job category for any resume using combined domain indicators and skill density matching."""
         if not resume_text:
             return "INFORMATION-TECHNOLOGY", 0.5
 
         text_lower = resume_text.lower()
-        best_cat = "INFORMATION-TECHNOLOGY"
-        max_matches = 0
+        scores = {cat: 0 for cat in self.categories}
 
+        # 1. Match high-confidence domain indicators
+        for cat, indicators in CATEGORY_DOMAIN_INDICATORS.items():
+            for kw in indicators:
+                if re.search(r'\b' + re.escape(kw) + r'\b', text_lower):
+                    scores[cat] += (3 if " " in kw else 2)
+
+        # 2. Match benchmark skills density
         for cat, skills in self.category_skills.items():
-            matches = sum(1 for s in skills if re.search(r'\b' + re.escape(s.lower()) + r'\b', text_lower))
-            if matches > max_matches:
-                max_matches = matches
-                best_cat = cat
+            for s in skills:
+                if re.search(r'\b' + re.escape(s.lower()) + r'\b', text_lower):
+                    scores[cat] += 1
 
-        confidence = min(0.95, 0.40 + (max_matches * 0.08))
+        best_cat = max(scores, key=scores.get)
+        max_score = scores[best_cat]
+
+        if max_score == 0:
+            return "INFORMATION-TECHNOLOGY", 0.40
+
+        confidence = min(0.96, 0.45 + (max_score * 0.05))
         return best_cat, round(confidence, 2)
 
 @st.cache_resource(show_spinner=False)

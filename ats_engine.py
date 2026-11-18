@@ -31,19 +31,36 @@ def extract_text_from_pdf(pdf_file_bytes) -> str:
         return f"Error reading PDF: {e}"
 
 def extract_skills_from_text(text: str) -> list[str]:
-    """Extracts all recognized technical and non-technical skills using optimized pattern matching."""
+    """Extracts all recognized technical and non-technical skills using optimized pattern matching with punctuation stripping and lemmatization."""
+    if not text:
+        return []
     text_lower = f" {text.lower()} "
-    # Pre-extract alphanumeric tokens for O(1) single-word lookups
-    words_set = set(re.findall(r'[a-z0-9#+.-]+', text_lower))
+    
+    # 1. Clean token extraction for O(1) single-word lookups
+    # Strips punctuation so words followed by periods, commas, parentheses (e.g. "Python.", "SQL,") are cleanly captured
+    raw_tokens = re.findall(r'[a-z0-9#+.-]+', text_lower)
+    words_set = set()
+    for t in raw_tokens:
+        clean = t.strip('.,;:!?()[]{}"\'`/*')
+        if clean:
+            words_set.add(clean)
+            # Lemmatized plural / suffix variants
+            if clean.endswith('s') and len(clean) > 3 and not clean.endswith('ss'):
+                words_set.add(clean[:-1])
+            if clean.endswith('ies') and len(clean) > 4:
+                words_set.add(clean[:-3] + 'y')
+
     found = []
     for skill in ALL_SKILLS_LIST:
         if " " in skill or "." in skill or "-" in skill or "/" in skill:
-            # Multi-word or hyphenated skill phrase
-            if skill in text_lower:
+            # Multi-word or special-character phrase: word-boundary match
+            pattern = r'\b' + re.escape(skill) + r'\b'
+            if re.search(pattern, text_lower):
                 found.append(skill)
         else:
             if skill in words_set:
                 found.append(skill)
+
     return sorted(list(set(found)))
 
 def detect_sections(text: str) -> dict[str, bool]:
@@ -115,6 +132,9 @@ def analyze_resume_ats(resume_text: str, target_category: str = "INFORMATION-TEC
     text = resume_text.strip()
     word_count = len(text.split())
 
+    # Predict probable category from Kaggle model
+    predicted_cat, predicted_conf = dataset_engine.predict_category(text)
+
     # 1. Target Skills Identification (Technical + Non-Technical)
     target_skills = []
     if job_description and len(job_description.strip()) > 30:
@@ -124,14 +144,14 @@ def analyze_resume_ats(resume_text: str, target_category: str = "INFORMATION-TEC
         category_benchmark_skills = get_skills_for_category(target_category)
         target_skills = [s.lower() for s in category_benchmark_skills]
 
-    # 2. Extract Candidate Skills (All technical and non-technical)
+    # 2. Extract Candidate Skills (All recognized skills in resume)
     candidate_skills = extract_skills_from_text(text)
     
-    # 3. Match Skills Calculation
+    # 3. Match Skills Calculation against Target
     matched_skills = [s for s in target_skills if s in candidate_skills]
     missing_skills = [s for s in target_skills if s not in candidate_skills]
     
-    # Categorize matched and missing skills into Technical vs Soft/Non-Technical
+    # Categorize matched, missing, and full candidate skills
     matched_by_cat = categorize_skills_list(matched_skills)
     missing_by_cat = categorize_skills_list(missing_skills)
     candidate_by_cat = categorize_skills_list(candidate_skills)
@@ -139,12 +159,12 @@ def analyze_resume_ats(resume_text: str, target_category: str = "INFORMATION-TEC
     tech_matched = len(matched_by_cat.get("Technical & Software", []))
     tech_missing = len(missing_by_cat.get("Technical & Software", []))
     tech_total = tech_matched + tech_missing
-    tech_match_pct = round((tech_matched / tech_total * 100.0), 1) if tech_total > 0 else 70.0
+    tech_match_pct = round((tech_matched / tech_total * 100.0), 1) if tech_total > 0 else (100.0 if not tech_missing else 0.0)
 
     soft_matched = sum(len(v) for k, v in matched_by_cat.items() if k != "Technical & Software")
     soft_missing = sum(len(v) for k, v in missing_by_cat.items() if k != "Technical & Software")
     soft_total = soft_matched + soft_missing
-    soft_match_pct = round((soft_matched / soft_total * 100.0), 1) if soft_total > 0 else 70.0
+    soft_match_pct = round((soft_matched / soft_total * 100.0), 1) if soft_total > 0 else (100.0 if not soft_missing else 0.0)
 
     skill_match_pct = (len(matched_skills) / len(target_skills) * 100) if target_skills else 70.0
     skill_match_score = min(100.0, round(skill_match_pct, 1))
@@ -269,6 +289,9 @@ def analyze_resume_ats(resume_text: str, target_category: str = "INFORMATION-TEC
             "impact_metrics": impact_score,
             "readability_formatting": readability_score
         },
+        "target_category": target_category,
+        "predicted_category": predicted_cat,
+        "predicted_confidence": predicted_conf,
         "matched_skills": matched_skills,
         "missing_skills": missing_skills,
         "matched_by_category": matched_by_cat,

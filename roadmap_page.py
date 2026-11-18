@@ -24,7 +24,7 @@ def render_roadmap_page():
 
     user = st.session_state.get("user", {})
     user_name = user.get("full_name", "Student Candidate")
-    target_cat = user.get("target_category", "INFORMATION-TECHNOLOGY")
+    target_cat = st.session_state.get("analyzed_category") or (st.session_state.get("latest_ats_analysis", {}).get("target_category")) or user.get("target_category", "INFORMATION-TECHNOLOGY")
 
     ats_res = st.session_state.get("latest_ats_analysis")
     if not ats_res:

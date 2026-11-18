@@ -1,7 +1,7 @@
 """
 HireLens AI - AI Resume Analysis & ATS Checker Page
 High-speed, mobile-responsive, visual gauge & radar scoring engine.
-Evaluates both Technical and Non-Technical / Soft / Leadership skills.
+Evaluates both Technical and Non-Technical / Soft / Leadership skills across all 24 domains.
 """
 import streamlit as st
 import plotly.graph_objects as go
@@ -68,18 +68,38 @@ def render_ats_analyzer():
             st.info(f"Loaded sample resume for **{selected_cat}** from `Divyaamith/Kaggle-Resume`.")
             resume_text = st.text_area("Sample Resume Content", value=sample_txt[:2500], height=200)
 
+        # Real-time Kaggle domain prediction indicator
+        if resume_text and len(resume_text.strip()) > 35:
+            detected_cat, detected_conf = dataset_engine.predict_category(resume_text)
+            st.markdown(f"""
+            <div style="background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 7px 12px; margin-top: 8px; font-size: 12.5px; color: #93C5FD;">
+                🎯 <strong>Kaggle AI Detected Domain:</strong> <span style="color:#FFFFFF; font-weight:700;">{detected_cat}</span> ({int(detected_conf*100)}% match)
+            </div>
+            """, unsafe_allow_html=True)
+            if input_mode != "📂 Kaggle Sample" and st.session_state.get("forced_target_cat") != detected_cat:
+                if st.button(f"⚡ Match Target Category to {detected_cat}", key="btn_align_target"):
+                    st.session_state["forced_target_cat"] = detected_cat
+                    st.rerun()
+
     with col_input_right:
         st.subheader("2. Target Role & Category")
         
-        default_cat_index = 0
-        user_cat = user.get("target_category", "INFORMATION-TECHNOLOGY")
-        if user_cat in KAGGLE_CATEGORIES:
-            default_cat_index = KAGGLE_CATEGORIES.index(user_cat)
+        # Determine active category
+        forced_cat = st.session_state.get("forced_target_cat")
+        if input_mode == "📂 Kaggle Sample":
+            default_cat = selected_cat
+        elif forced_cat and forced_cat in KAGGLE_CATEGORIES:
+            default_cat = forced_cat
+        else:
+            default_cat = user.get("target_category", "INFORMATION-TECHNOLOGY")
+
+        default_cat_index = KAGGLE_CATEGORIES.index(default_cat) if default_cat in KAGGLE_CATEGORIES else 0
 
         target_category = st.selectbox(
             "Target Category (from Kaggle Dataset)",
             KAGGLE_CATEGORIES,
-            index=default_cat_index
+            index=default_cat_index,
+            key="target_category_selector"
         )
 
         job_desc = st.text_area(
@@ -125,9 +145,39 @@ def render_ats_analyzer():
         grade = res["grade"]
         color = res["badge_color"]
         sub = res["sub_scores"]
+        target_c = res.get("target_category", target_category)
+        pred_c = res.get("predicted_category", target_c)
+        pred_conf = int(res.get("predicted_confidence", 0.7) * 100)
 
         st.markdown("---")
         st.markdown("### 📊 Interactive ATS Audit Breakdown")
+
+        # Domain Mismatch Alert if target differs from detected domain
+        if pred_c and pred_c != target_c:
+            col_alert1, col_alert2 = st.columns([0.8, 0.2])
+            with col_alert1:
+                st.markdown(f"""
+                <div style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-left: 4px solid #F59E0B; border-radius: 10px; padding: 10px 16px; margin-bottom: 14px;">
+                    <div style="color: #FBBF24; font-weight: 700; font-size: 13.5px; margin-bottom: 2px;">
+                        💡 Domain Notice: Evaluating Across Different Fields
+                    </div>
+                    <div style="color: #CBD5E1; font-size: 12.5px;">
+                        Currently auditing against <strong>{target_c}</strong>. Based on content, our Kaggle AI Model detected this resume strongly belongs to <strong>{pred_c}</strong> ({pred_conf}% match).
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            with col_alert2:
+                if st.button(f"🔄 Re-Audit as {pred_c}", key="btn_reaudit_domain", use_container_width=True):
+                    st.session_state["forced_target_cat"] = pred_c
+                    with st.spinner(f"Re-auditing against {pred_c}..."):
+                        new_res = analyze_resume_ats(
+                            resume_text=st.session_state.get("analyzed_resume_text", resume_text),
+                            target_category=pred_c,
+                            job_description=job_desc
+                        )
+                        st.session_state["latest_ats_analysis"] = new_res
+                        st.session_state["analyzed_category"] = pred_c
+                        st.rerun()
 
         # Visual Row: Gauge + Radar Chart
         col_g1, col_g2 = st.columns([1, 1])
@@ -139,14 +189,15 @@ def render_ats_analyzer():
                 title={'text': f"ATS Score: Grade {grade}", 'font': {'size': 20, 'color': '#FFFFFF'}},
                 gauge={
                     'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "#94A3B8"},
-                    'bar': {'color': color},
-                    'bgcolor': "#1E293B",
+                    'bar': {'color': color, 'thickness': 0.28},
+                    'bgcolor': "rgba(255,255,255,0.05)",
                     'borderwidth': 1,
-                    'bordercolor': "#334155",
+                    'bordercolor': "rgba(255,255,255,0.1)",
                     'steps': [
-                        {'range': [0, 55], 'color': 'rgba(239, 68, 68, 0.2)'},
-                        {'range': [55, 75], 'color': 'rgba(245, 158, 11, 0.2)'},
-                        {'range': [75, 100], 'color': 'rgba(16, 185, 129, 0.2)'}
+                        {'range': [0, 55], 'color': 'rgba(239, 68, 68, 0.15)'},
+                        {'range': [55, 70], 'color': 'rgba(245, 158, 11, 0.15)'},
+                        {'range': [70, 85], 'color': 'rgba(59, 130, 246, 0.15)'},
+                        {'range': [85, 100], 'color': 'rgba(16, 185, 129, 0.15)'}
                     ],
                     'threshold': {
                         'line': {'color': "#60A5FA", 'width': 3},
@@ -169,8 +220,8 @@ def render_ats_analyzer():
             categories_radar = ['Technical Skills', 'Soft Skills', 'Leadership & Ops', 'Problem Solving', 'ATS Sections', 'Impact Metrics']
             
             cand_by_cat = res.get("candidate_by_category", {})
-            tech_val = sub.get('technical_match', 70.0)
-            soft_val = sub.get('soft_match', 70.0)
+            tech_val = sub.get('technical_match', sub.get('skill_match', 70.0))
+            soft_val = sub.get('soft_match', sub.get('skill_match', 70.0))
             lead_val = min(100.0, len(cand_by_cat.get("Leadership & Management", [])) * 25.0 + 30.0)
             prob_val = min(100.0, len(cand_by_cat.get("Analytical & Problem Solving", [])) * 25.0 + 30.0)
             sec_val = sub['section_completeness']
@@ -222,26 +273,40 @@ def render_ats_analyzer():
         with tab_skills_all:
             matched_by_cat = res.get("matched_by_category", {})
             missing_by_cat = res.get("missing_by_category", {})
+            cand_by_cat = res.get("candidate_by_category", {})
+            candidate_skills = res.get("candidate_skills", [])
+            matched_skills = res.get("matched_skills", [])
+            missing_skills = res.get("missing_skills", [])
 
             col_sk1, col_sk2 = st.columns(2)
             with col_sk1:
-                st.markdown("#### ✅ Matched Skills in Resume")
+                st.markdown(f"#### ✅ Matched Target Skills ({len(matched_skills)})")
                 if not matched_by_cat:
-                    st.warning("No explicit target skills detected.")
+                    st.info(f"0 direct benchmark matches for **{target_c}**.")
                 else:
                     for cat_title, skill_list in matched_by_cat.items():
                         st.markdown(f"**{cat_title} ({len(skill_list)})**")
-                        tags = "".join([f'<span class="skill-badge skill-badge-matched">✓ {s}</span>' for s in skill_list])
+                        tags = "".join([f'<span class="skill-badge skill-badge-matched"><span style="color:#34D399;font-weight:700;margin-right:4px;">✓</span>{s}</span>' for s in skill_list])
+                        st.markdown(tags, unsafe_allow_html=True)
+
+                st.markdown("<hr style='margin: 14px 0; border: none; border-top: 1px solid rgba(255,255,255,0.08);'>", unsafe_allow_html=True)
+                st.markdown(f"#### 🌟 All Skills Identified in Resume ({len(candidate_skills)})")
+                if not cand_by_cat:
+                    st.caption("No standardized professional skills detected in the current resume text.")
+                else:
+                    for cat_title, skill_list in cand_by_cat.items():
+                        st.markdown(f"**{cat_title} ({len(skill_list)})**")
+                        tags = "".join([f'<span class="skill-badge skill-badge-detected"><span style="color:#60A5FA;font-weight:700;margin-right:4px;">●</span>{s}</span>' for s in skill_list])
                         st.markdown(tags, unsafe_allow_html=True)
 
             with col_sk2:
-                st.markdown("#### ❌ Missing Critical Skills (Gaps)")
+                st.markdown(f"#### ❌ Missing Critical Skills for {target_c} ({len(missing_skills)})")
                 if not missing_by_cat:
-                    st.success("All target skills matched!")
+                    st.success(f"All target benchmark skills matched for **{target_c}**!")
                 else:
                     for cat_title, skill_list in missing_by_cat.items():
                         st.markdown(f"**{cat_title} ({len(skill_list)})**")
-                        tags = "".join([f'<span class="skill-badge skill-badge-missing">✗ {s}</span>' for s in skill_list])
+                        tags = "".join([f'<span class="skill-badge skill-badge-missing"><span style="color:#F87171;font-weight:700;margin-right:4px;">✕</span>{s}</span>' for s in skill_list])
                         st.markdown(tags, unsafe_allow_html=True)
 
         with tab_sections:
