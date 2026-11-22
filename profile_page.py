@@ -14,10 +14,10 @@ from config import KAGGLE_CATEGORIES
 def render_profile_page():
     st.markdown("""
     <div style="margin-bottom: 20px;">
-        <h2 style="font-size: 26px; font-weight: 800; color: #1e3a8a; margin-bottom: 4px;">
+        <h2 style="font-size: 26px; font-weight: 800; color: #60A5FA; margin-bottom: 4px;">
             👤 Candidate Profile & Notification Preferences
         </h2>
-        <p style="color: #64748b; margin: 0;">
+        <p style="color: #94A3B8; margin: 0; font-size: 13.5px;">
             Keep your personal details, location, and skills updated so that HireLens can trigger accurate job alerts for you.
         </p>
     </div>

@@ -7,6 +7,7 @@ import hashlib
 import os
 import json
 from datetime import datetime
+import streamlit as st
 from config import DB_PATH
 
 def get_connection():
@@ -216,10 +217,16 @@ def insert_job(title, company, category, city, state, country, lat, lon,
     conn.commit()
     job_id = cursor.lastrowid
     conn.close()
+    try:
+        get_all_jobs.clear()
+        get_jobs_near_user.clear()
+    except Exception:
+        pass
     return job_id
 
+@st.cache_data(ttl=60, show_spinner=False)
 def get_all_jobs(category=None, country=None, state=None, city=None, search=None, limit=200):
-    """Queries jobs with optional filters."""
+    """Queries jobs with optional filters (Cached for 60s for ultra-fast response)."""
     conn = get_connection()
     cursor = conn.cursor()
     conditions = []
@@ -251,8 +258,9 @@ def get_all_jobs(category=None, country=None, state=None, city=None, search=None
     conn.close()
     return [dict(r) for r in rows]
 
+@st.cache_data(ttl=60, show_spinner=False)
 def get_jobs_near_user(city, state, country, category=None):
-    """Retrieves jobs prioritizing same city/state/country."""
+    """Retrieves jobs prioritizing same city/state/country (Cached for 60s)."""
     conn = get_connection()
     cursor = conn.cursor()
     

@@ -268,17 +268,18 @@ html, body, [class*="css"] {
     letter-spacing: 0.6px;
 }
 
-/* Modern Form Controls */
+/* Modern Form Controls & Focus Glow */
 .stTextInput input, .stTextArea textarea, .stSelectbox [data-baseweb="select"] {
     background: #0F172A !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     color: #F8FAFC !important;
     border-radius: 10px !important;
+    transition: all 0.2s ease !important;
 }
 
 .stTextInput input:focus, .stTextArea textarea:focus {
     border-color: #3B82F6 !important;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
 }
 
 /* Primary Action Buttons */
@@ -291,11 +292,62 @@ html, body, [class*="css"] {
     padding: 0.55rem 1.2rem !important;
     box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
     transition: all 0.2s ease !important;
+    transform: translateZ(0);
 }
 
 .stButton button[kind="primary"]:hover {
-    transform: translateY(-1px) !important;
+    transform: translateY(-1px) translateZ(0) !important;
     box-shadow: 0 8px 22px rgba(37, 99, 235, 0.6) !important;
+}
+
+/* Hardware Acceleration & Smooth Rendering */
+.hirelens-hero, .stat-card, .job-card, .notification-banner, .skill-badge {
+    transform: translateZ(0);
+    will-change: transform;
+    contain: layout style;
+}
+
+/* Custom Sleek Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #0B0F19;
+}
+::-webkit-scrollbar-thumb {
+    background: #1E293B;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #3B82F6;
+}
+
+/* Top Quick Navigation Bar (Desktop & Mobile) */
+.top-nav-bar {
+    margin-bottom: 16px;
+    padding: 8px 10px;
+    background: rgba(17, 24, 39, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.3);
+}
+
+.top-nav-bar [data-testid="column"] {
+    min-width: 0 !important;
+    padding: 0 3px !important;
+}
+
+.top-nav-bar .stButton button {
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    padding: 6px 8px !important;
+    min-height: 38px !important;
+    white-space: nowrap !important;
+    transition: all 0.15s ease !important;
 }
 
 /* ==========================================================================
@@ -303,64 +355,84 @@ html, body, [class*="css"] {
    ========================================================================== */
 @media screen and (max-width: 768px) {
     .main .block-container {
-        padding-left: 0.75rem !important;
-        padding-right: 0.75rem !important;
-        padding-top: 0.5rem !important;
+        padding-left: 0.65rem !important;
+        padding-right: 0.65rem !important;
+        padding-top: 0.35rem !important;
+    }
+
+    /* Top Navigation Bar: Clean 3x2 Touch Grid on Mobile */
+    .top-nav-bar {
+        padding: 6px 4px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .top-nav-bar [data-testid="column"] {
+        min-width: 31% !important;
+        flex: 1 1 31% !important;
+        margin-bottom: 4px !important;
+    }
+
+    .top-nav-bar .stButton button {
+        font-size: 11.5px !important;
+        min-height: 36px !important;
+        padding: 4px 4px !important;
     }
 
     .hirelens-hero {
-        padding: 16px 18px !important;
+        padding: 14px 16px !important;
         border-radius: 14px !important;
-        margin-bottom: 14px !important;
+        margin-bottom: 12px !important;
     }
 
     .hero-title {
-        font-size: 21px !important;
-        line-height: 1.2 !important;
+        font-size: 20px !important;
+        line-height: 1.25 !important;
     }
 
     .hero-subtitle {
-        font-size: 12px !important;
+        font-size: 11.5px !important;
+        line-height: 1.4 !important;
     }
 
-    /* Stack Streamlit Columns on Mobile */
-    [data-testid="column"] {
-        min-width: 100% !important;
-        margin-bottom: 10px !important;
+    /* Stack Form & Major Layout Columns on Mobile */
+    .stForm [data-testid="column"], .main > div:not(.top-nav-bar) > [data-testid="column"] {
+        margin-bottom: 8px;
     }
 
     .stat-val {
-        font-size: 24px !important;
+        font-size: 22px !important;
     }
 
     .stat-card {
-        padding: 14px 16px !important;
+        padding: 12px 14px !important;
         border-radius: 12px !important;
     }
 
     .job-card {
-        padding: 14px 16px !important;
+        padding: 12px 14px !important;
+        border-radius: 12px !important;
     }
 
     .job-title {
-        font-size: 15.5px !important;
+        font-size: 15px !important;
     }
 
     .job-meta {
-        font-size: 11.5px !important;
-        gap: 8px !important;
+        font-size: 11px !important;
+        gap: 6px !important;
     }
 
-    /* Make buttons full width and finger-tap friendly on mobile */
+    /* Touch-friendly buttons on mobile */
     .stButton button {
-        width: 100% !important;
-        min-height: 44px !important;
-        font-size: 14px !important;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        min-height: 42px !important;
+        font-size: 13.5px !important;
     }
 
-    /* Hide horizontal scroll traps */
+    /* Prevent horizontal overflow on mobile charts */
     .stPlotlyChart {
-        overflow-x: auto !important;
+        overflow-x: hidden !important;
         max-width: 100% !important;
     }
 

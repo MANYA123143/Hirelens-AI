@@ -76,8 +76,16 @@ def main():
         return
 
     user = st.session_state["user"]
-    notifications = get_user_notifications(user["id"], limit=5)
-    unread_count = sum(1 for n in notifications if not n["is_read"])
+    
+    # Efficient notification caching: only query when unread_count is not cached or marked dirty
+    if "unread_count" not in st.session_state or st.session_state.get("refresh_notifs", False):
+        try:
+            notifs = get_user_notifications(user["id"], limit=5)
+            st.session_state["unread_count"] = sum(1 for n in notifs if not n["is_read"])
+            st.session_state["refresh_notifs"] = False
+        except Exception:
+            st.session_state["unread_count"] = 0
+    unread_count = st.session_state.get("unread_count", 0)
 
     # Define Navigation Structure
     notif_badge = f" 🔥 ({unread_count})" if unread_count > 0 else ""
@@ -94,6 +102,28 @@ def main():
     page_keys = list(pages.keys())
     current_key = st.session_state.get("current_page", "dashboard")
     default_index = page_keys.index(current_key) if current_key in page_keys else 0
+
+    # ==================== TOP QUICK-NAV BAR (Mobile & Laptop Fast Switching) ====================
+    top_nav_items = [
+        ("dashboard", "🏠", "Dashboard"),
+        ("ats_analyzer", "🎯", "ATS Audit"),
+        ("roadmap", "📈", "Roadmap"),
+        ("resume_maker", "📝", "Resume Maker"),
+        ("job_opportunities", "🗺️", "Job Map"),
+        ("profile", "👤", "Profile")
+    ]
+    
+    st.markdown('<div class="top-nav-bar">', unsafe_allow_html=True)
+    t_cols = st.columns(len(top_nav_items))
+    for idx, (p_key, icon, label) in enumerate(top_nav_items):
+        with t_cols[idx]:
+            is_active = (current_key == p_key)
+            btn_type = "primary" if is_active else "secondary"
+            if st.button(f"{icon} {label}", key=f"tnav_{p_key}", type=btn_type, use_container_width=True):
+                if current_key != p_key:
+                    st.session_state["current_page"] = p_key
+                    st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # ==================== SIDEBAR NAVIGATION (Desktop & Tablet) ====================
     with st.sidebar:
@@ -121,8 +151,9 @@ def main():
         )
 
         for k, v in pages.items():
-            if v == selected_label:
+            if v == selected_label and k != current_key:
                 st.session_state["current_page"] = k
+                st.rerun()
                 break
 
         st.markdown("<br>", unsafe_allow_html=True)

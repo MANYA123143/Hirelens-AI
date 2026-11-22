@@ -213,7 +213,7 @@ def render_ats_analyzer():
                 height=260,
                 margin=dict(l=20, r=20, t=40, b=10)
             )
-            st.plotly_chart(fig_gauge, use_container_width=True)
+            st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False, 'responsive': True})
 
         with col_g2:
             # 6-Axis Multi-Dimensional Radar Chart (Technical + Soft + Management)
@@ -247,7 +247,7 @@ def render_ats_analyzer():
                 height=260,
                 margin=dict(l=35, r=35, t=30, b=30)
             )
-            st.plotly_chart(fig_radar, use_container_width=True)
+            st.plotly_chart(fig_radar, use_container_width=True, config={'displayModeBar': False, 'responsive': True})
 
         # 4 Sub-score metrics
         sc1, sc2, sc3, sc4 = st.columns(4)

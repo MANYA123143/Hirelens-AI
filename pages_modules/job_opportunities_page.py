@@ -347,7 +347,7 @@ def render_job_opportunities():
             )
 
             deck = pdk.Deck(
-                layers=[scatterplot_layer, column_layer],
+                layers=[scatterplot_layer],
                 initial_view_state=view_state,
                 tooltip={
                     "html": "<b>{title}</b><br/>"
@@ -397,7 +397,7 @@ def render_job_opportunities():
                 margin=dict(l=0, r=0, t=10, b=10),
                 height=420
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'responsive': True})
 
     st.markdown("<br>", unsafe_allow_html=True)
 

@@ -36,11 +36,12 @@ def match_jobs_for_candidate(user: dict, min_match_pct: float = 40.0) -> list[di
     user_state = (user.get("state") or "").lower().strip()
     user_category = user.get("target_category", "")
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM jobs ORDER BY id DESC")
-    all_jobs = [dict(r) for r in cursor.fetchall()]
-    conn.close()
+    try:
+        from database.db import get_all_jobs
+    except ModuleNotFoundError:
+        from db import get_all_jobs
+
+    all_jobs = get_all_jobs(limit=300)
 
     matches = []
     for job in all_jobs:
